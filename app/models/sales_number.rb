@@ -1,0 +1,2 @@
+class SalesNumber < ApplicationRecord
+end
