@@ -5,6 +5,18 @@
 #
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
+
+def get_sales_numbers(year, month, object)
+  sum = 0
+  begin_date = Date.new(year, month)
+  end_date = Date.new(year, month).end_of_month
+  object.orders.where("invoice_date >= ?", begin_date).where("invoice_date <= ?", end_date).each do |order|
+  puts order.total_price
+    sum += order.total_price
+  end
+  object.sales_numbers.create(month: month, year: year, sales: sum.round(2))
+end
+
 7.times do |time|
   file = File.read("sales_data_page#{time + 1}.json")
   json = eval(file)
@@ -39,6 +51,24 @@
       end
 
       customer.orders.create(product_id: product.id, invoice_id: item[:invoice], invoice_date: invoice_date, quantity: item[:totalQty], unit_price: item[:unitPrice], total_price: item[:totalPrice], promo: promo)
+    end
+  end
+end
+
+Product.all.each do |object|
+  years = [15,16,17]
+  12.times do |month|
+    years.each do |year|
+      get_sales_numbers(2000 + year, month + 1, object)
+    end
+  end
+end
+
+Customer.all.each do |object|
+  years = [15,16,17]
+  12.times do |month|
+    years.each do |year|
+      get_sales_numbers(2000 + year, month + 1, object)
     end
   end
 end
