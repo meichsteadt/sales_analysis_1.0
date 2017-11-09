@@ -1,6 +1,7 @@
 class Customer < ApplicationRecord
   has_many :orders
   has_many :sales_numbers
+  has_and_belongs_to_many :products
 
   def total_sales
     sum = 0
@@ -42,6 +43,10 @@ class Customer < ApplicationRecord
       end
     end
     sum
+  end
+
+  def missing_best_sellers
+
   end
 
   def self.rank
