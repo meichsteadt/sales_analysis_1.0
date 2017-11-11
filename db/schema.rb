@@ -10,10 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171109195524) do
+ActiveRecord::Schema.define(version: 20171110235559) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "customer_comparisons", force: :cascade do |t|
+    t.integer  "customer_id"
+    t.integer  "customer2_id"
+    t.string   "customer2_name"
+    t.float    "sim_pearson"
+    t.datetime "created_at",     null: false
+    t.datetime "updated_at",     null: false
+  end
 
   create_table "customers", force: :cascade do |t|
     t.string   "name"
@@ -43,8 +52,9 @@ ActiveRecord::Schema.define(version: 20171109195524) do
     t.float    "total_price"
     t.boolean  "promo"
     t.integer  "product_id"
-    t.datetime "created_at",   null: false
-    t.datetime "updated_at",   null: false
+    t.datetime "created_at",     null: false
+    t.datetime "updated_at",     null: false
+    t.string   "product_number"
   end
 
   create_table "products", force: :cascade do |t|
@@ -64,6 +74,15 @@ ActiveRecord::Schema.define(version: 20171109195524) do
     t.boolean  "rep_number",  default: false
     t.datetime "created_at",                  null: false
     t.datetime "updated_at",                  null: false
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.float    "sales_ytd"
+    t.float    "prev_sales_ytd"
+    t.string   "email"
+    t.string   "password_digest"
+    t.datetime "created_at",      null: false
+    t.datetime "updated_at",      null: false
   end
 
 end
