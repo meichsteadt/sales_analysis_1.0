@@ -2,19 +2,12 @@ class Customer < ApplicationRecord
   has_many :orders
   has_many :sales_numbers
   has_many :customer_comparisons
+  has_many :recommended_items
   has_many :customers, :through => :customer_comparisons
 
   def total_sales
     sum = 0
     self.sales_numbers.each do |order|
-      sum += order.sales
-    end
-    sum.round(2)
-  end
-
-  def sales_ytd
-    sum = 0
-    self.sales_numbers.where(year: Date.today.year).each do |order|
       sum += order.sales
     end
     sum.round(2)
@@ -53,31 +46,43 @@ class Customer < ApplicationRecord
     else
       orders = self.orders.all.sort_by {|order| order.total_price}
     end
-    orders.each do |order|
-      if customer_products[order.product_number]
-        customer_products[order.product_number] += order.total_price
-      else
-        customer_products[order.product_number] = order.total_price
+    orders.each_with_index do |order, index|
+      if !customer_products[order.product_number]
+        customer_products[order.product_number] = {}
       end
+      if customer_products[order.product_number]["sales_ytd"]
+        customer_products[order.product_number]["sales_ytd"] += order.total_price
+      else
+        customer_products[order.product_number]["sales_ytd"] = order.total_price
+      end
+
+      if customer_products[order.product_number]["last_sold"]
+        if customer_products[order.product_number]["last_sold"] < order.invoice_date
+          customer_products[order.product_number]["last_sold"] = order.invoice_date
+        end
+      else
+        customer_products[order.product_number]["last_sold"] = order.invoice_date
+      end
+
     end
-    customer_products.sort_by {|key, val| val}.reverse.to_h
+    customer_products.sort_by {|key, val| val["sales_ytd"]}.reverse
   end
 
   def missing_best_sellers(user)
     total_sales_ytd = user.sales_ytd
-    best_sellers = self.best_sellers
+    products = self.products.to_h
     mi = {}
-    Product.where("position < 100").each do |product|
-      if !best_sellers[product.number]
+    Product.where("position < 100").sort_by {|prod| prod.position}.each do |product|
+      if !products[product.number]
         product_sales = product.sales_ytd
-        mi[product.number] = {"sales": product_sales, "percentage": product_sales/total_sales_ytd * 100}
+        mi[product.number] = {"sales": product_sales, "percentage": product_sales/total_sales_ytd}
       end
     end
-    mi
+    mi.sort_by {|key, val| val["sales"]}
   end
 
   def self.rank
-    customers = Customer.all.sort_by {|customer| customer.total_sales}.reverse
+    customers = Customer.all.sort_by {|customer| customer.sales_ytd}.reverse
     customers.each_with_index do |customer, index|
       customer.update(prev_position: customer.position)
       customer.update(position: index + 1)
@@ -147,5 +152,83 @@ class Customer < ApplicationRecord
       end
     end
     i
+  end
+
+  def sort_sales_numbers
+    numbers = []
+    today = Date.today
+    self.sales_numbers.sort {|a,b| [b.year, b.month] <=> [a.year, a.month]}.each do |number|
+      if number.year == today.year
+        if number.month <= today.month
+          numbers.push(number)
+        end
+      else
+        numbers.push(number)
+      end
+    end
+    numbers
+  end
+
+  def prorate(number)
+    (1 - ((Date.today.end_of_year - Date.today).to_f / 365)) * number
+  end
+
+  def promo_percentage
+    sum = 0
+    self.orders.where(promo: true).where("invoice_date > ?", Date.today.beginning_of_year).each do |order|
+      sum += order.total_price
+    end
+    sum/self.sales_ytd
+  end
+
+  def get_recommended_items
+    # start = Time.now
+    totals = {}
+    sim_sums = {}
+
+    Customer.all.each do |customer|
+      if customer.id != self.id
+        comparisons = self.customer_comparisons.all
+        sim = self.get_comparison(customer.id).sim_pearson
+        if sim > 0
+          self.missing_items(customer).each do |item|
+            totals[item[0]]? totals[item[0]]+= item[1]*sim : totals[item[0]] = item[1]*sim
+            sim_sums[item[0]]? sim_sums[item[0]]+=sim : sim_sums[item[0]] = sim
+          end
+        end
+      end
+    end
+
+    rankings = []
+    totals.each do |item, total|
+      if item != "PALLET/"
+        rankings.push({item => total/sim_sums[item]})
+      end
+    end
+    rankings.sort_by! {|ranking| ranking.values.first}.reverse!.first(50)
+    # Time.now - start
+  end
+
+  def missing_items(customer2)
+    mi = {}
+    c1_products = self.products.to_h
+    customer2.products.each do |product|
+      if !c1_products[product[0]]
+        mi[product[0]] = product[1]["sales_ytd"]
+      end
+    end
+    mi.sort_by {|key, val| val}.reverse
+  end
+
+  def update_sales(start_date, end_date)
+    sum = 0
+    self.orders.where("invoice_date >= ? AND invoice_date <= ?", start_date, end_date).each do |order|
+      sum += order.total_price
+    end
+    self.update(sales_last_year: sum)
+  end
+
+  def growth
+    return self.sales_ytd - self.sales_last_year
   end
 end

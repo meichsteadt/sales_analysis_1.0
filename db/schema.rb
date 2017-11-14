@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171110235559) do
+ActiveRecord::Schema.define(version: 20171114101638) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -30,8 +30,10 @@ ActiveRecord::Schema.define(version: 20171110235559) do
     t.integer  "position"
     t.integer  "prev_position"
     t.string   "name_id"
-    t.datetime "created_at",    null: false
-    t.datetime "updated_at",    null: false
+    t.datetime "created_at",      null: false
+    t.datetime "updated_at",      null: false
+    t.float    "sales_last_year"
+    t.float    "sales_ytd"
   end
 
   create_table "customers_products", force: :cascade do |t|
@@ -61,8 +63,20 @@ ActiveRecord::Schema.define(version: 20171110235559) do
     t.string   "number"
     t.integer  "position"
     t.integer  "prev_position"
-    t.datetime "created_at",    null: false
-    t.datetime "updated_at",    null: false
+    t.datetime "created_at",      null: false
+    t.datetime "updated_at",      null: false
+    t.date     "last_sold"
+    t.float    "sales_last_year"
+    t.float    "sales_ytd"
+  end
+
+  create_table "recommended_items", force: :cascade do |t|
+    t.integer  "customer_id"
+    t.integer  "product_id"
+    t.float    "projected_sales"
+    t.string   "product_number"
+    t.datetime "created_at",      null: false
+    t.datetime "updated_at",      null: false
   end
 
   create_table "sales_numbers", force: :cascade do |t|
