@@ -181,12 +181,23 @@ class Customer < ApplicationRecord
     sum/self.sales_ytd
   end
 
+  def missing_growth_items
+    products = self.products.to_h
+    mni = {}
+    Product.all.sort_by {|prod| prod.growth}.reverse.each do |product|
+      if !products[product.number]
+        mni[product.number] = {sales_ytd: product.sales_ytd, growth: product.growth}
+      end
+    end
+    mni.first(50)
+  end
+
   def get_recommended_items
     # start = Time.now
     totals = {}
     sim_sums = {}
 
-    Customer.all.each do |customer|
+    Customer.where("position <= 61").each do |customer|
       if customer.id != self.id
         comparisons = self.customer_comparisons.all
         sim = self.get_comparison(customer.id).sim_pearson
@@ -205,7 +216,7 @@ class Customer < ApplicationRecord
         rankings.push({item => total/sim_sums[item]})
       end
     end
-    rankings.sort_by! {|ranking| ranking.values.first}.reverse!.first(50)
+    rankings.sort_by! {|ranking| ranking.values.first}.reverse!.first(100)
     # Time.now - start
   end
 

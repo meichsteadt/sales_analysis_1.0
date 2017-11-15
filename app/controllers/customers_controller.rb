@@ -15,11 +15,12 @@ class CustomersController < ApplicationController
       format.json {render json: {
         "customer": @customer,
         "sales_numbers": @customer.sort_sales_numbers,
-        "products": @customer.products.first(100),
+        "products": @customer.products.first(50),
         "missing_best_sellers": @customer.missing_best_sellers(User.first),
         "sales_ytd": @customer.sales_ytd,
         "promo_percentage": @customer.promo_percentage,
-        "recommended_items": @customer.recommended_items
+        "recommended_items": @customer.recommended_items,
+        "missing_growth_items": @customer.missing_growth_items
       }}
     end
   end
